@@ -1,0 +1,66 @@
+Problem 1 - Answers
+Run order: problem1_DDL.sql, problem1_DML.sql, then type the statements below in: mysql -u root -p company
+
+==================================================================
+Q1.1  Insert a DEPARTMENT row that references an EMPLOYEE, then delete that employee
+==================================================================
+SQL:
+  INSERT INTO DEPARTMENT (Dnumber, Dname, mgr_ssn, mgr_start_date)
+  VALUES (4, 'Finance', '444444444', '2024-01-01');
+  DELETE FROM EMPLOYEE WHERE ssn = '444444444';
+
+Output:
+  Query OK, 1 row affected
+  ERROR 1451 (23000): Cannot delete or update a parent row: a foreign key constraint fails
+  (`company`.`department`, CONSTRAINT `fk_dept_mgr` FOREIGN KEY (`mgr_ssn`) REFERENCES `employee` (`ssn`))
+
+Explanation: the employee is the parent row of department 4. MySQL rejects the DELETE to keep
+referential integrity (the default behaviour is RESTRICT / NO ACTION).
+
+==================================================================
+Q1.2  Insert a PROJECT row that references a DEPARTMENT that does not exist yet
+==================================================================
+SQL:
+  INSERT INTO PROJECT (Pnumber, Pname, Plocation, Dno)
+  VALUES (40, 'ProductZ', 'Alexandria', 99);
+
+Output:
+  ERROR 1452 (23000): Cannot add or update a child row: a foreign key constraint fails
+  (`company`.`project`, CONSTRAINT `fk_proj_dept` FOREIGN KEY (`Dno`) REFERENCES `department` (`Dnumber`))
+
+Explanation: Dno = 99 is neither NULL nor an existing Dnumber, so the insert is rejected.
+Fix: insert department 99 first, then the project.
+
+==================================================================
+Q1.3  mgr_ssn and Dno both NOT NULL: how to insert the first row?
+==================================================================
+Problem: the first employee needs an existing department, and the first department needs an
+existing employee as manager. Neither row can go first (a chicken-and-egg cycle), and NULL
+is not allowed to break it.
+
+SQL:
+  ALTER TABLE EMPLOYEE   MODIFY Dno     INT      NOT NULL;
+  ALTER TABLE DEPARTMENT MODIFY mgr_ssn CHAR(9)  NOT NULL;
+
+  -- first try the normal way: fails
+  INSERT INTO EMPLOYEE (ssn, fname, lname, bdate, address, gender, salary, Dno)
+  VALUES ('555555555', 'Laila', 'Nabil', '1995-02-02', 'Alexandria', 'F', 6000.00, 50);
+
+  -- solution: disable the FK check, insert both rows, enable it again
+  SET FOREIGN_KEY_CHECKS = 0;
+  INSERT INTO EMPLOYEE (ssn, fname, lname, bdate, address, gender, salary, Dno)
+  VALUES ('555555555', 'Laila', 'Nabil', '1995-02-02', 'Alexandria', 'F', 6000.00, 50);
+  INSERT INTO DEPARTMENT (Dnumber, Dname, mgr_ssn, mgr_start_date)
+  VALUES (50, 'Planning', '555555555', '2025-01-01');
+  SET FOREIGN_KEY_CHECKS = 1;
+
+Output:
+  ERROR 1452 (23000): Cannot add or update a child row: a foreign key constraint fails
+  (`company`.`employee`, CONSTRAINT `fk_emp_dept` FOREIGN KEY (`Dno`) REFERENCES `department` (`Dnumber`))
+  Query OK, 0 rows affected
+  Query OK, 1 row affected
+  Query OK, 1 row affected
+  Query OK, 0 rows affected
+
+Other ways: (a) keep one of the two columns nullable, insert with NULL, then UPDATE it;
+(b) create the tables without FKs, insert the rows, then add the FKs with ALTER TABLE.

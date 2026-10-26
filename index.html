@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; background-color: #f8f9fa; color: #333; }
+        h1, h2, h3 { color: #2c3e50; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 25px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #dee2e6; padding: 10px 12px; text-align: left; vertical-align: middle; }
+        th { background-color: #e9ecef; }
+        form { display: inline-block; margin: 0; }
+        input[type="text"], input[type="number"], select { padding: 6px 10px; border: 1px solid #ced4da; border-radius: 4px; }
+        button, .btn-delete { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        button { background-color: #0d6efd; color: white; }
+        button:hover { background-color: #0b5ed7; }
+        .btn-delete { background-color: #dc3545; color: white; }
+        .btn-delete:hover { background-color: #bb2d3b; }
+        .form-card { background: #fff; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .img-preview { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; }
+        .actions-cell { display: flex; gap: 6px; align-items: center; }
+    </style>
+</head>
+<body>
+    <h1>Library Management System</h1>
+
+  
+    <h2>Authors</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Photo</th>
+                <th>Name</th>
+                <th>Country</th>
+                <th>New Photo</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for author in authors %}
+            <tr>
+                
+                <td>{{ loop.index }}</td>
+                
+                <td>
+                    {% if author.image %}
+                        <img src="/static/uploads/{{ author.image }}" class="img-preview" alt="Author Photo">
+                    {% else %}
+                        <span style="color: #aaa;">—</span>
+                    {% endif %}
+                </td>
+                
+                <form id="edit-author-{{ author.author_id }}" action="/authors/edit/{{ author.author_id }}" method="POST" enctype="multipart/form-data">
+                    <td><input type="text" name="name" value="{{ author.name }}" required></td>
+                    <td><input type="text" name="country" value="{{ author.country }}" required></td>
+                    <td><input type="file" name="image" accept="image/*"></td>
+                </form>
+
+                <td>
+                    <div class="actions-cell">
+                        <button type="submit" form="edit-author-{{ author.author_id }}">Save</button>
+                        
+                        <form action="/authors/delete/{{ author.author_id }}" method="POST" onsubmit="return confirm('Deleting this author will automatically delete all their books!')">
+                            <button type="submit" class="btn-delete">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="form-card">
+        <h3>Add New Author</h3>
+        <form action="/authors/add" method="POST" enctype="multipart/form-data">
+            <input type="text" name="name" placeholder="Author Name" required>
+            <input type="text" name="country" placeholder="Country" required>
+            <input type="file" name="image" accept="image/*">
+            <button type="submit">Add Author</button>
+        </form>
+    </div>
+
+    
+    
+    <h2>Books</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Cover</th>
+                <th>Title</th>
+                <th>Price ($)</th>
+                <th>Author</th>
+                <th>New Cover</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for book in books %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                
+                <td>
+                    {% if book.image %}
+                        <img src="/static/uploads/{{ book.image }}" class="img-preview" alt="Book Cover">
+                    {% else %}
+                        <span style="color: #aaa;">—</span>
+                    {% endif %}
+                </td>
+                
+                <form id="edit-book-{{ book.book_id }}" action="/books/edit/{{ book.book_id }}" method="POST" enctype="multipart/form-data">
+                    <td><input type="text" name="title" value="{{ book.title }}" required></td>
+                    <td><input type="number" step="0.01" name="price" value="{{ book.price }}" required></td>
+                    <td>
+                       
+                        
+                        <select name="author_id">
+                            {% for author in authors %}
+                                <option value="{{ author.author_id }}" {% if author.author_id == book.author_id %}selected{% endif %}>
+                                    {{ loop.index }} - {{ author.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td><input type="file" name="image" accept="image/*"></td>
+                </form>
+
+                <td>
+                    <div class="actions-cell">
+                        <button type="submit" form="edit-book-{{ book.book_id }}">Save</button>
+
+                        <form action="/books/delete/{{ book.book_id }}" method="POST">
+                            <button type="submit" class="btn-delete">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="form-card">
+        <h3>Add New Book</h3>
+        <form action="/books/add" method="POST" enctype="multipart/form-data">
+            <input type="text" name="title" placeholder="Book Title" required>
+            <input type="number" step="0.01" name="price" placeholder="Price" required>
+            <select name="author_id" required>
+                <option value="">Select Author</option>
+                {% for author in authors %}
+                    <option value="{{ author.author_id }}">{{ loop.index }} - {{ author.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="file" name="image" accept="image/*">
+            <button type="submit">Add Book</button>
+        </form>
+    </div>
+</body>
+</html>
